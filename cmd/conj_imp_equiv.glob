@@ -1,0 +1,21 @@
+DIGEST 6a1509989e2db7f995c32f757df73c39
+Fconj_imp_equiv
+prf 6:19 <> conj_imp_equiv
+binder 30:30 <> P:1
+binder 32:32 <> Q:2
+binder 34:34 <> R:3
+R43:43 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R55:61 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R73:73 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R50:53 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R45:48 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R44:44 conj_imp_equiv <> P:1 var
+R49:49 conj_imp_equiv <> Q:2 var
+R54:54 conj_imp_equiv <> R:3 var
+R63:66 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R62:62 conj_imp_equiv <> P:1 var
+R68:71 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R67:67 conj_imp_equiv <> Q:2 var
+R72:72 conj_imp_equiv <> R:3 var
+R132:135 Coq.Init.Logic <> conj constr
+R132:135 Coq.Init.Logic <> conj constr

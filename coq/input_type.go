@@ -1,0 +1,25 @@
+package coq
+
+type InputType int
+
+const (
+	ABORT InputType = iota
+	APPLY
+	ASSUMPTION
+	AUTO
+	BULLET
+	DESTRUCT
+	INTRO
+	INTROS
+	INTUITION
+	INVERSION
+	LEMMA
+	OMEGA
+	PROOF
+	REFLEXIVITY
+	SIMPL
+	SPLIT
+	UNFOLD
+	UNKNOWN
+	QED
+)

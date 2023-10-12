@@ -1,0 +1,19 @@
+DIGEST d2203978aa501b9dc0a5cf9f35082c3f
+Fauto_example
+prf 6:17 <> auto_example
+binder 29:29 <> P:1
+binder 31:31 <> Q:2
+binder 33:33 <> R:3
+R43:43 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R50:54 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R45:48 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R44:44 auto_example <> P:1 var
+R49:49 auto_example <> Q:2 var
+R55:55 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R62:66 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R57:60 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R56:56 auto_example <> Q:2 var
+R61:61 auto_example <> R:3 var
+R68:71 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R67:67 auto_example <> P:1 var
+R72:72 auto_example <> R:3 var
