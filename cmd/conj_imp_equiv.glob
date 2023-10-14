@@ -1,4 +1,4 @@
-DIGEST 6a1509989e2db7f995c32f757df73c39
+DIGEST 94a308a5293e42100f71aa09f69532ed
 Fconj_imp_equiv
 prf 6:19 <> conj_imp_equiv
 binder 30:30 <> P:1
@@ -17,5 +17,5 @@ R62:62 conj_imp_equiv <> P:1 var
 R68:71 Coq.Init.Logic <> ::type_scope:x_'->'_x not
 R67:67 conj_imp_equiv <> Q:2 var
 R72:72 conj_imp_equiv <> R:3 var
-R132:135 Coq.Init.Logic <> conj constr
-R132:135 Coq.Init.Logic <> conj constr
+R144:147 Coq.Init.Logic <> conj constr
+R144:147 Coq.Init.Logic <> conj constr

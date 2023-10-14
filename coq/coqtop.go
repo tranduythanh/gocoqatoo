@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type Coqtop struct {
@@ -66,15 +67,33 @@ func (c *Coqtop) Execute(script string) []*InputOutput {
 
 		output := ""
 
+		timeoutTicker := time.NewTicker(time.Millisecond * 100)
+		defer timeoutTicker.Stop()
+
+	outerLoop:
 		for {
-			line, err := c.reader.ReadString('\n')
-			if err != nil && err != io.EOF {
-				fmt.Println("Error reading from coqtop:", err)
-				break
-			}
-			output += line
-			if !strings.HasSuffix(line, "\n") {
-				break
+			line, err := "", error(nil)
+			readDone := make(chan bool)
+
+			go func() {
+				line, err = c.reader.ReadString('\n')
+				readDone <- true
+			}()
+
+			select {
+			case <-readDone:
+				if err != nil && err != io.EOF {
+					fmt.Println("Error reading:", err)
+					break outerLoop
+				}
+
+				output += line
+				if !strings.HasSuffix(line, "\n") {
+					break outerLoop
+				}
+
+			case <-timeoutTicker.C:
+				break outerLoop
 			}
 		}
 
