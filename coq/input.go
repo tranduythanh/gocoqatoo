@@ -8,7 +8,7 @@ type Input struct {
 }
 
 func NewInput(value string) *Input {
-	trimmedValue := value // TODO: Remove existing comments from input
+	trimmedValue := strings.TrimSpace(value) // TODO: Remove existing comments from input
 	typ := determineType(trimmedValue)
 	return &Input{Value: trimmedValue, Typ: typ}
 }
