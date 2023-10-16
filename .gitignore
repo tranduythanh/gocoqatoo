@@ -39,3 +39,5 @@ out/*
 *.snm
 *.toc
 *.vrb
+coqatoo
+.DS_Store

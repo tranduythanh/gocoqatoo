@@ -176,7 +176,7 @@ func (tr *TextRewriter) FormatScript(proofScript string) string {
 
 	// Step 3: Execute formatted script to get the list of inputs/outputs
 	// Assuming `Main.coqtop.execute` is a function returning a slice of InputOutput
-	tr.InputsOutputs = coq.NewCoqtop(false).Execute(formattedScript)
+	tr.InputsOutputs = coq.NewCoqtop(true).Execute(formattedScript)
 
 	// Step 4: Build the proof tree
 	// TODO: Clean this part
@@ -184,8 +184,7 @@ func (tr *TextRewriter) FormatScript(proofScript string) string {
 	bulletLevel := make(map[int]string)
 	bulletsToAddAfter := make(map[int]string)
 	bulletStr := ""
-	i := 0
-	for _, p := range tr.InputsOutputs {
+	for i, p := range tr.InputsOutputs {
 		if p.Input.Value == "Qed." {
 			break
 		}
@@ -221,7 +220,6 @@ func (tr *TextRewriter) FormatScript(proofScript string) string {
 				}
 			}
 		}
-		i++
 	}
 
 	// Step 5: Insert bullets in inputsOutputs
