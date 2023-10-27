@@ -6,7 +6,6 @@ import (
 
 	"github.com/tranduythanh/gocoqatoo/coq"
 	"github.com/tranduythanh/gocoqatoo/rewriters/rules"
-	"github.com/yudai/pp"
 )
 
 type TextRewriter struct {
@@ -145,11 +144,12 @@ func (tr *TextRewriter) GetTextVersion() string {
 
 func (tr *TextRewriter) Rewrite(proofScript string) {
 	// formattedScript := tr.FormatScript(proofScript)
+	// pp.Println(formattedScript)
+
 	tr.ExtractInformation(proofScript)
 
-	pp.Println(tr.InputsOutputs)
-
 	textVersion := tr.GetTextVersion()
+
 	textVersion = strings.ReplaceAll(textVersion, "<[{", "")
 	textVersion = strings.ReplaceAll(textVersion, "}]>", "")
 	fmt.Println(textVersion)
@@ -246,7 +246,6 @@ func (tr *TextRewriter) ExtractInformation(proofScript string) {
 	if tr.scriptWithUnfoldedAutos != tr.script {
 		coqtop := coq.NewCoqtop(true)
 		tr.InputsOutputs = coqtop.Execute(tr.scriptWithUnfoldedAutos)
-		coqtop.Stop()
 	}
 }
 

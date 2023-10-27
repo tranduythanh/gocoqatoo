@@ -1,120 +1,138 @@
 package coq
 
 import (
-	"bufio"
-	"fmt"
 	"io"
 	"os/exec"
+	"regexp"
 	"strings"
-	"time"
 )
 
 type Coqtop struct {
 	debugging bool
-	process   *exec.Cmd
-	stdin     io.WriteCloser
-	stdout    io.ReadCloser
-	stderr    io.ReadCloser
-	reader    *bufio.Reader
-	writer    *bufio.Writer
 }
 
 func NewCoqtop(debugging bool) *Coqtop {
 	coqtop := &Coqtop{
 		debugging: debugging,
-		process:   exec.Command("coqtop"),
 	}
-
-	var err error
-	coqtop.stdin, err = coqtop.process.StdinPipe()
-	if err != nil {
-		fmt.Println("Error creating stdin pipe:", err)
-		return nil
-	}
-
-	coqtop.stdout, err = coqtop.process.StdoutPipe()
-	if err != nil {
-		fmt.Println("Error creating stdout pipe:", err)
-		return nil
-	}
-
-	coqtop.stderr, err = coqtop.process.StderrPipe()
-	if err != nil {
-		fmt.Println("Error creating stderr pipe:", err)
-		return nil
-	}
-
-	if err := coqtop.process.Start(); err != nil {
-		fmt.Println("Error starting process:", err)
-		return nil
-	}
-
-	coqtop.reader = bufio.NewReader(coqtop.stdout)
-	coqtop.writer = bufio.NewWriter(coqtop.stdin)
-
-	coqtop.reader.ReadString('\n') // Ignore the first output of coqtop
 
 	return coqtop
 }
 
 func (c *Coqtop) Execute(script string) []*InputOutput {
+	output := c.execute(script)
+
+	outputs := splitByTextLineNumbers(output)
+
 	scriptLines := strings.Split(script, "\n")
 	var inputsOutputs []*InputOutput
 
+	i := 0
 	for _, input := range scriptLines {
-		c.writer.WriteString(strings.ReplaceAll(input, "auto.", "info_auto.") + "\n")
-		c.writer.Flush()
-
-		output := ""
-
-		timeoutTicker := time.NewTicker(time.Millisecond * 100)
-		defer timeoutTicker.Stop()
-
-	outerLoop:
-		for {
-			line, err := "", error(nil)
-			readDone := make(chan bool)
-
-			go func() {
-				line, err = c.reader.ReadString('\n')
-				readDone <- true
-			}()
-
-			select {
-			case <-readDone:
-				if err != nil && err != io.EOF {
-					fmt.Println("Error reading:", err)
-					break outerLoop
-				}
-
-				output += line
-				if !strings.HasSuffix(line, "\n") {
-					break outerLoop
-				}
-
-			case <-timeoutTicker.C:
-				break outerLoop
-			}
+		newInput := NewInput(input)
+		newOutput := NewOutput("")
+		switch input {
+		case "Proof.", "Qed.":
+			// do nothing
+		case "":
+			continue
+		default:
+			newOutput = NewOutput(outputs[i])
+			i++
 		}
 
 		inputsOutputs = append(inputsOutputs, &InputOutput{
-			Input:  NewInput(input),
-			Output: NewOutput(output),
+			Input:  newInput,
+			Output: newOutput,
 		})
-
-		if c.debugging {
-			fmt.Println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-			fmt.Println("Input:", strings.TrimSpace(input))
-			fmt.Println("Output:\n", output)
-			fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-		}
 	}
 
 	return inputsOutputs
 }
 
-func (c *Coqtop) Stop() {
-	if c.process.ProcessState == nil || !c.process.ProcessState.Exited() {
-		c.process.Process.Kill()
+func (c *Coqtop) execute(script string) string {
+	scriptLines := strings.Split(script, "\n")
+
+	cmd := exec.Command("coqtop")
+
+	stdin, _ := cmd.StdinPipe()
+	stdout, _ := cmd.StdoutPipe()
+
+	output := ""
+
+	err := cmd.Start()
+	if err != nil {
+		panic(err)
 	}
+
+	// Start command first
+	go func() {
+		defer stdin.Close()
+		for _, input := range scriptLines {
+			io.WriteString(stdin, input+"\n")
+		}
+	}()
+
+	// Read output in goroutine
+	go func() {
+		defer stdout.Close()
+		stdOutBytes, _ := io.ReadAll(stdout)
+		output = string(stdOutBytes)
+	}()
+
+	err = cmd.Wait()
+	if err != nil {
+		panic(err)
+	}
+
+	return output
+}
+
+func splitByTextLineNumbers(text string) []string {
+	text = strings.Trim(text, "\n\r\t ")
+
+	lines := strings.Split(text, "\n")
+	if len(lines) == 0 {
+		return []string{}
+	}
+
+	for i := range lines {
+		lines[i] = strings.Trim(lines[i], "\n\r\t ")
+	}
+
+	if strings.Contains(strings.ToUpper(lines[0]), "WELCOME TO COQ") {
+		lines = lines[1:]
+	}
+
+	lineNumbers := getGoalLineNumbers(lines)
+
+	var result []string
+	for k, lineNumber := range lineNumbers {
+		from := lineNumber
+		to := len(lines)
+		if k+1 < len(lineNumbers) {
+			to = lineNumbers[k+1]
+		}
+		if lineNumber < len(lines) {
+			txt := strings.Join(lines[from:to], "\n")
+			result = append(result, txt)
+		}
+	}
+
+	return result
+}
+
+func getGoalLineNumbers(lines []string) []int {
+	var goalLines []int
+	goalRegex := regexp.MustCompile(`^(\d+) goal(s)?$`)
+
+	for i, line := range lines {
+		if goalRegex.MatchString(line) ||
+			strings.Contains(line, "No more goals.") {
+			goalLines = append(goalLines, i)
+		}
+	}
+
+	return goalLines
+
 }

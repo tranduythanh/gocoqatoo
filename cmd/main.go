@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/tranduythanh/gocoqatoo/bundle"
-	"github.com/tranduythanh/gocoqatoo/coq"
 	"github.com/tranduythanh/gocoqatoo/rewriters"
 )
 
@@ -36,14 +35,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	var debug = false
-
-	if *debugMode {
-		debug = true
-	}
-
-	coqtop := coq.NewCoqtop(debug)
-
 	textRewriter := rewriters.NewTextRewriter(bundleLang)
 	coqRewriter := rewriters.NewCoqRewriter(*textRewriter)
 	latexRewriter := rewriters.NewLatexRewriter(*textRewriter)
@@ -52,38 +43,31 @@ func main() {
 		verifyFileExists(*inputFile)
 		fileContents, _ := os.ReadFile(*inputFile)
 
-		fmt.Println("---------------------------------------------")
-		fmt.Println("|             Coq Version                   |")
-		fmt.Println("---------------------------------------------")
-		fmt.Println(string(fileContents))
+		// fmt.Println("---------------------------------------------")
+		// fmt.Println("|             Coq Version                   |")
+		// fmt.Println("---------------------------------------------")
+		// fmt.Println(string(fileContents))
 
 		switch *mode {
 		case "coq":
 			fmt.Println("---------------------------------------------")
 			fmt.Println("|                Coq Version                |")
 			fmt.Println("---------------------------------------------")
-			// Assuming you have a CoqRewriter function
 			coqRewriter.Rewrite(string(fileContents))
 		case "latex":
 			fmt.Println("---------------------------------------------")
 			fmt.Println("|              LaTeX Version                |")
 			fmt.Println("---------------------------------------------")
-			// Assuming you have a LatexRewriter function
 			latexRewriter.Rewrite(string(fileContents))
 		case "dot":
-			// Assuming you have a TextRewriter function
 			textRewriter.Rewrite(string(fileContents))
-			// Assuming you have a outputProofTreeAsDot function
 			textRewriter.OutputProofTreeAsDot()
 		default:
 			fmt.Println("---------------------------------------------")
 			fmt.Println("|               Text Version                |")
 			fmt.Println("---------------------------------------------")
-			// Assuming you have a TextRewriter function
 			textRewriter.Rewrite(string(fileContents))
 		}
-
-		coqtop.Stop()
 	} else {
 		flag.PrintDefaults()
 	}
