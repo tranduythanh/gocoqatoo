@@ -20,11 +20,21 @@ func NewOutput(value string) *Output {
 }
 
 func (o *Output) GetNumberOfRemainingSubgoals() int {
-	subgoalsStr := strings.Split(o.Value, " ")[0]
-	subgoals, err := strconv.Atoi(subgoalsStr)
-	if err != nil {
+	if len(o.Value) == 0 {
 		return 0
 	}
+
+	subgoalsStr := strings.Split(o.Value, " ")[0]
+
+	subgoals, err := strconv.Atoi(subgoalsStr)
+	if err != nil {
+		subgoalsStr = strings.Split(o.Value, " ")[1]
+		subgoals, err = strconv.Atoi(subgoalsStr)
+		if err != nil {
+			return 0
+		}
+	}
+
 	return subgoals
 }
 
