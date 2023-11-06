@@ -1,17 +1,19 @@
 package coq
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 type Output struct {
 	Value       string
-	Assumptions map[Assumption]struct{}
+	Assumptions map[string]*Assumption
 	Goal        *Goal
 }
 
 func NewOutput(value string) *Output {
+	value = strings.Trim(value, "\r\t\n ")
 	return &Output{
 		Value:       value,
 		Assumptions: determineAssumptions(value),
@@ -39,59 +41,70 @@ func (o *Output) GetNumberOfRemainingSubgoals() int {
 }
 
 func determineGoal(value string) *Goal {
-	t := strings.Split(value, "============================\n ")
-	if len(t) > 1 {
-		goalStr := strings.Split(t[1], "\n")[0]
-		return NewGoal(strings.TrimSpace(goalStr))
+	goals := parseGoals(value)
+	if len(goals) > 0 {
+		return NewGoal(strings.Join(goals, "\n"))
 	}
 	return NewGoal("")
 }
 
-func determineAssumptions(value string) map[Assumption]struct{} {
-	assumptions := make(map[Assumption]struct{})
+func parseGoals(input string) []string {
+	// Regular expression to match the goals
+	// It looks for lines starting with "goal" followed by any text until the end of the line
+	goalRegexp := regexp.MustCompile(`(?m)^goal\s\d\s*is:\s*(.*)$`)
 
-	t := splitBySeparator(value)
-	if len(t) <= 1 {
-		return assumptions
-	}
+	// Find all matches
+	matches := goalRegexp.FindAllStringSubmatch(input, -1)
 
-	assumpStrs := extractAssumptions(t[0])
-	for _, s := range assumpStrs {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			continue
+	// Initialize a slice to hold the goals
+	var goals []string
+
+	// Loop over the matches and extract the goals
+	for _, match := range matches {
+		if len(match) > 1 { // match[0] is the full match, match[1] is the first subgroup
+			goals = append(goals, strings.TrimSpace(match[1]))
 		}
+	}
 
-		assumptionParts := splitAssumption(s)
-		if len(assumptionParts) != 2 {
-			continue
+	// The first goal is not prefixed with "goal" in the input string, so we need to extract it separately
+	// Split the input by lines
+	lines := strings.Split(input, "\n")
+
+	// Assuming the first goal is always on the line right after "============================"
+	for i, line := range lines {
+		if strings.Contains(line, "============================") && i+1 < len(lines) {
+			firstGoal := strings.TrimSpace(lines[i+1])
+			goals = append([]string{firstGoal}, goals...) // Prepend the first goal
+			break
 		}
-
-		addAssumptions(assumptionParts[0], assumptionParts[1], assumptions)
 	}
 
-	return assumptions
+	return goals
 }
 
-func splitBySeparator(value string) []string {
-	return strings.Split(value, "============================\n ")
-}
+func determineAssumptions(input string) map[string]*Assumption {
+	// Initialize a map to hold the props and their types/definitions
+	ret := map[string]*Assumption{}
 
-func extractAssumptions(value string) []string {
-	t := strings.Split(value, "\n  \n ")
-	if len(t) > 1 {
-		return strings.Split(t[1], "\n ")
+	// Regular expression to match the props and their types/definitions
+	// It looks for any pattern that starts with an identifier followed by ":" and the definition
+	propRegexp := regexp.MustCompile(`(?m)^(\w+)\s*:\s*(.*)$`)
+
+	// Find all matches
+	matches := propRegexp.FindAllStringSubmatch(input, -1)
+
+	// Loop over the matches and populate the map
+	for _, match := range matches {
+		if len(match) > 2 { // match[0] is the full match, match[1] is the name, match[2] is the typ
+			name := strings.TrimSpace(match[1])
+			typ := strings.TrimSpace(match[2])
+			a := &Assumption{
+				Name: name,
+				Typ:  typ,
+			}
+			ret[a.ID()] = a
+		}
 	}
-	return []string{}
-}
 
-func splitAssumption(s string) []string {
-	return strings.Split(s, " : ")
-}
-
-func addAssumptions(namesStr, typeStr string, assumptions map[Assumption]struct{}) {
-	names := strings.Split(namesStr, ", ")
-	for _, name := range names {
-		assumptions[*NewAssumption(name + " : " + typeStr)] = struct{}{}
-	}
+	return ret
 }

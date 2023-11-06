@@ -1,12 +1,17 @@
 package coq
 
 import (
+	"fmt"
 	"strings"
 )
 
 type Assumption struct {
 	Name string
 	Typ  string
+}
+
+func (a *Assumption) ID() string {
+	return fmt.Sprintf("%s:%s", a.Name, a.Typ)
 }
 
 func NewAssumption(value string) *Assumption {

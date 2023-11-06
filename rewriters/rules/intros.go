@@ -18,15 +18,15 @@ func NewIntros(bundle map[string]string) *Intros {
 func (i *Intros) Apply(
 	input *coq.Input,
 	output *coq.Output,
-	before map[coq.Assumption]struct{},
-	after map[coq.Assumption]struct{},
+	before map[string]*coq.Assumption,
+	after map[string]*coq.Assumption,
 	previousOutput *coq.Output,
 ) string {
 	var result, variables, hypotheses string
 	typesToVariables := make(map[string][]string)
 
 	// Helper function to determine if a map contains a specific key
-	containsKey := func(m map[coq.Assumption]struct{}, key coq.Assumption) bool {
+	containsKey := func(m map[string]*coq.Assumption, key string) bool {
 		_, exists := m[key]
 		return exists
 	}
@@ -35,18 +35,18 @@ func (i *Intros) Apply(
 		assumptionTypeIsAlsoVariableName := false
 		for b := range before {
 			if containsKey(before, b) || containsKey(after, b) {
-				if a.Typ == b.Name {
+				if after[a].Typ == before[b].Name {
 					assumptionTypeIsAlsoVariableName = true
 				}
 			}
 		}
 
-		if !strings.Contains(a.Typ, " ") && !assumptionTypeIsAlsoVariableName {
+		if !strings.Contains(after[a].Typ, " ") && !assumptionTypeIsAlsoVariableName {
 			// Need to use intros.given
-			typesToVariables[a.Typ] = append(typesToVariables[a.Typ], a.Name)
+			typesToVariables[after[a].Typ] = append(typesToVariables[after[a].Typ], after[a].Name)
 		} else {
 			// Need to use intros.suppose
-			hypotheses += fmt.Sprintf("%s, ", a.Typ)
+			hypotheses += fmt.Sprintf("%s, ", after[a].Typ)
 		}
 	}
 
@@ -56,13 +56,13 @@ func (i *Intros) Apply(
 
 	if variables != "" {
 		variables = strings.TrimSuffix(variables, ", ")
-		result += fmt.Sprintf("intros.given: %s", variables)
+		result += fmt.Sprintf("\nintros.given:\t%s", variables)
 	}
 	if hypotheses != "" {
 		hypotheses = strings.TrimSuffix(hypotheses, ", ")
-		result += fmt.Sprintf("intros.suppose: %s", hypotheses)
+		result += fmt.Sprintf("\nintros.suppose:\t%s", hypotheses)
 	}
-	result += fmt.Sprintf("intros.goal: %s", output.Goal.Value)
+	result += fmt.Sprintf("\nintros.goal:\t%s", output.Goal.Value)
 
 	return result
 }

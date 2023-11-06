@@ -26,16 +26,17 @@ func (cr *CoqRewriter) GetTextVersion() string {
 		input := p.Input
 		output := p.Output
 		var previousOutput *coq.Output
-		assumptionsBeforeTactic := make(map[coq.Assumption]struct{})
-		assumptionsAddedAfterTactic := make(map[coq.Assumption]struct{})
-		for assumption := range output.Assumptions {
-			assumptionsAddedAfterTactic[assumption] = struct{}{}
+		assumptionsBeforeTactic := make(map[string]*coq.Assumption)
+		assumptionsAddedAfterTactic := make(map[string]*coq.Assumption)
+
+		for aID, assumption := range output.Assumptions {
+			assumptionsAddedAfterTactic[aID] = assumption
 		}
 
 		if i != 0 {
 			previousOutput = cr.InputsOutputs[i-1].Output
-			for assumption := range previousOutput.Assumptions {
-				assumptionsBeforeTactic[assumption] = struct{}{}
+			for aID, assumption := range previousOutput.Assumptions {
+				assumptionsBeforeTactic[aID] = assumption
 			}
 		}
 

@@ -6,6 +6,8 @@ import (
 
 	"github.com/tranduythanh/gocoqatoo/coq"
 	"github.com/tranduythanh/gocoqatoo/rewriters/rules"
+	"github.com/tranduythanh/gocoqatoo/stack"
+	"github.com/yudai/pp"
 )
 
 type TextRewriter struct {
@@ -72,17 +74,17 @@ func (tr *TextRewriter) GetTextVersion() string {
 		input := p.Input
 		output := p.Output
 		var previousOutput *coq.Output
-		assumptionsBeforeTactic := make(map[coq.Assumption]struct{})
-		assumptionsAddedAfterTactic := make(map[coq.Assumption]struct{})
+		assumptionsBeforeTactic := make(map[string]*coq.Assumption)
+		assumptionsAddedAfterTactic := make(map[string]*coq.Assumption)
 
-		for assumption := range output.Assumptions {
-			assumptionsAddedAfterTactic[assumption] = struct{}{}
+		for aID, assumption := range output.Assumptions {
+			assumptionsAddedAfterTactic[aID] = assumption
 		}
 
 		if i != 0 {
 			previousOutput = tr.InputsOutputs[i-1].Output
-			for assumption := range previousOutput.Assumptions {
-				assumptionsBeforeTactic[assumption] = struct{}{}
+			for aID, assumption := range previousOutput.Assumptions {
+				assumptionsBeforeTactic[aID] = assumption
 			}
 		}
 
@@ -233,6 +235,8 @@ func (tr *TextRewriter) FormatScript(proofScript string) string {
 		numberOfInputsInserted++
 	}
 
+	pp.Println(tr.InputsOutputs)
+
 	return formattedScript
 }
 
@@ -255,48 +259,53 @@ func (r *TextRewriter) OutputProofTreeAsDot() {
 	fmt.Println("---------------------------------------------")
 	fmt.Println("digraph {")
 
-	stack := []int{}
+	stack := stack.New[int]()
 	bulletLevel := make(map[int]string)
 	bulletsToAddAfter := make(map[int]string)
 	bulletStr := ""
 
 	for i, p := range r.InputsOutputs {
+		pp.Println(stack)
 		if p.Input.Value == "Qed." {
 			break
 		}
+
 		if i == 0 {
-			stack = append(stack, i)
-		} else {
-			previousNode := stack[len(stack)-1]
-			stack = stack[:len(stack)-1] // pop the last element
+			stack.Push(i)
+			continue
+		}
 
-			previousPair := r.InputsOutputs[i-1]
-			numberOfSubgoalsBeforeTactic := previousPair.Output.GetNumberOfRemainingSubgoals()
-			numberOfSubgoalsAfterTactic := p.Output.GetNumberOfRemainingSubgoals()
+		previousNode := stack.Pop()
 
-			addedSubgoals := numberOfSubgoalsAfterTactic - numberOfSubgoalsBeforeTactic
-			if addedSubgoals > 0 {
-				for j := 0; j <= addedSubgoals; j++ {
-					stack = append(stack, i)
-				}
-				fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
-				bulletStr += "-"
-				bulletLevel[i] = bulletStr
-			} else if addedSubgoals == 0 {
-				if val, ok := bulletLevel[previousNode]; ok {
-					bulletsToAddAfter[i] = val
-				}
-				fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
-				stack = append(stack, i)
-			} else if addedSubgoals < 0 {
-				if val, ok := bulletLevel[previousNode]; ok {
-					bulletsToAddAfter[i] = val
-				}
-				fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
-				if len(stack) > 0 {
-					nextNodeId := stack[len(stack)-1]
-					bulletStr = bulletLevel[nextNodeId]
-				}
+		pp.Println("previousNode", previousNode)
+		pp.Println("stack", stack)
+
+		previousPair := r.InputsOutputs[i-1]
+		numberOfSubgoalsBeforeTactic := previousPair.Output.GetNumberOfRemainingSubgoals()
+		numberOfSubgoalsAfterTactic := p.Output.GetNumberOfRemainingSubgoals()
+
+		addedSubgoals := numberOfSubgoalsAfterTactic - numberOfSubgoalsBeforeTactic
+		if addedSubgoals > 0 {
+			for j := 0; j <= addedSubgoals; j++ {
+				stack.Push(i)
+			}
+			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
+			bulletStr += "-"
+			bulletLevel[i] = bulletStr
+		} else if addedSubgoals == 0 {
+			if val, ok := bulletLevel[previousNode]; ok {
+				bulletsToAddAfter[i] = val
+			}
+			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
+			stack.Push(i)
+		} else if addedSubgoals < 0 {
+			if val, ok := bulletLevel[previousNode]; ok {
+				bulletsToAddAfter[i] = val
+			}
+			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
+			if stack.Len() > 0 {
+				nextNodeId := stack.Pop()
+				bulletStr = bulletLevel[nextNodeId]
 			}
 		}
 	}

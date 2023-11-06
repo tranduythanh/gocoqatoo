@@ -18,15 +18,15 @@ func NewApply(bundle map[string]string) *Apply {
 func (a *Apply) Apply(
 	input *coq.Input,
 	output *coq.Output,
-	before, after map[coq.Assumption]struct{},
+	before, after map[string]*coq.Assumption,
 	previousOutput *coq.Output,
 ) string {
 	lemmaName := strings.Replace(strings.Split(input.Value, " ")[1], ".", "", -1)
 	var lemmaDefinition string
 
-	for assumption := range before {
-		if assumption.Name == lemmaName {
-			lemmaDefinition = assumption.Typ
+	for b := range before {
+		if before[b].Name == lemmaName {
+			lemmaDefinition = before[b].Typ
 			break
 		}
 	}

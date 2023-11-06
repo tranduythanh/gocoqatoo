@@ -18,23 +18,23 @@ func NewInversion(bundle map[string]string) *Inversion {
 func (i *Inversion) Apply(
 	input *coq.Input,
 	output *coq.Output,
-	before, after map[coq.Assumption]struct{},
+	before, after map[string]*coq.Assumption,
 	previousOutput *coq.Output,
 ) string {
 	inversionLemmaName := strings.Replace(strings.Split(input.Value, " ")[1], ".", "", -1)
 	var inversionLemmaDefinition string
 
 	for a := range before {
-		if a.Name == inversionLemmaName {
-			inversionLemmaDefinition = a.Typ
+		if after[a].Name == inversionLemmaName {
+			inversionLemmaDefinition = after[a].Typ
 			break
 		}
 	}
 
 	var enumerationOfAddedAssumptions []string
 	for a := range after {
-		if !strings.Contains(a.Typ, " ") {
-			enumerationOfAddedAssumptions = append(enumerationOfAddedAssumptions, a.Typ)
+		if !strings.Contains(after[a].Typ, " ") {
+			enumerationOfAddedAssumptions = append(enumerationOfAddedAssumptions, after[a].Typ)
 		}
 	}
 	enumerationStr := strings.Join(enumerationOfAddedAssumptions, ", ")

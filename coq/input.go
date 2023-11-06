@@ -8,9 +8,9 @@ type Input struct {
 }
 
 func NewInput(value string) *Input {
-	trimmedValue := strings.TrimSpace(value) // TODO: Remove existing comments from input
-	typ := determineType(trimmedValue)
-	return &Input{Value: trimmedValue, Typ: typ}
+	value = strings.Trim(value, "\r\t\n ")
+	typ := determineType(value)
+	return &Input{Value: value, Typ: typ}
 }
 
 func determineType(value string) InputType {
