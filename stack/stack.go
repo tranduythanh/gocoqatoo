@@ -36,3 +36,13 @@ func (s *Stack[T]) Pop() (value T) {
 	var zero T // zero value for type T
 	return zero
 }
+
+// Peek returns the value of the top element without removing it from the stack
+// If the stack is empty, it returns the zero value for the type T
+func (s *Stack[T]) Peek() (value T) {
+	if s.size > 0 {
+		return s.top.value
+	}
+	var zero T // zero value for type T
+	return zero
+}

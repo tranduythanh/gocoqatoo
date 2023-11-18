@@ -28,16 +28,19 @@ func (c *Coqtop) Execute(script string) []*InputOutput {
 	var inputsOutputs []*InputOutput
 
 	i := 0
+	preOutput := ""
+
 	for _, input := range scriptLines {
 		newInput := NewInput(input)
 		newOutput := NewOutput("")
 		switch input {
 		case "Proof.", "Qed.":
-			// do nothing
+			newOutput = NewOutput(preOutput)
 		case "":
 			continue
 		default:
 			newOutput = NewOutput(outputs[i])
+			preOutput = outputs[i]
 			i++
 		}
 
@@ -45,6 +48,7 @@ func (c *Coqtop) Execute(script string) []*InputOutput {
 			Input:  newInput,
 			Output: newOutput,
 		})
+
 	}
 
 	return inputsOutputs

@@ -8,6 +8,7 @@ import (
 	"github.com/tranduythanh/gocoqatoo/rewriters/rules"
 	"github.com/tranduythanh/gocoqatoo/stack"
 	"github.com/yudai/pp"
+	"gonum.org/v1/gonum/graph/simple"
 )
 
 type TextRewriter struct {
@@ -15,11 +16,13 @@ type TextRewriter struct {
 	script                  string
 	scriptWithUnfoldedAutos string
 	InputsOutputs           []*coq.InputOutput
+	g                       *simple.DirectedGraph
 }
 
 func NewTextRewriter(rewritingBundle map[string]string) *TextRewriter {
 	return &TextRewriter{
 		rewritingBundle: rewritingBundle,
+		g:               simple.NewDirectedGraph(),
 	}
 }
 
@@ -254,6 +257,8 @@ func (tr *TextRewriter) ExtractInformation(proofScript string) {
 }
 
 func (r *TextRewriter) OutputProofTreeAsDot() {
+	nodeMap := make(map[int]simple.Node)
+
 	fmt.Println("---------------------------------------------")
 	fmt.Println("|                Proof Tree                 |")
 	fmt.Println("---------------------------------------------")
@@ -265,7 +270,6 @@ func (r *TextRewriter) OutputProofTreeAsDot() {
 	bulletStr := ""
 
 	for i, p := range r.InputsOutputs {
-		pp.Println(stack)
 		if p.Input.Value == "Qed." {
 			break
 		}
@@ -277,37 +281,55 @@ func (r *TextRewriter) OutputProofTreeAsDot() {
 
 		previousNode := stack.Pop()
 
-		pp.Println("previousNode", previousNode)
-		pp.Println("stack", stack)
-
 		previousPair := r.InputsOutputs[i-1]
 		numberOfSubgoalsBeforeTactic := previousPair.Output.GetNumberOfRemainingSubgoals()
 		numberOfSubgoalsAfterTactic := p.Output.GetNumberOfRemainingSubgoals()
 
 		addedSubgoals := numberOfSubgoalsAfterTactic - numberOfSubgoalsBeforeTactic
+
 		if addedSubgoals > 0 {
 			for j := 0; j <= addedSubgoals; j++ {
 				stack.Push(i)
 			}
 			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
+			addEdge(r.g, nodeMap, previousNode, i)
 			bulletStr += "-"
 			bulletLevel[i] = bulletStr
+
 		} else if addedSubgoals == 0 {
 			if val, ok := bulletLevel[previousNode]; ok {
 				bulletsToAddAfter[i] = val
 			}
 			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
+			addEdge(r.g, nodeMap, previousNode, i)
 			stack.Push(i)
+
 		} else if addedSubgoals < 0 {
 			if val, ok := bulletLevel[previousNode]; ok {
 				bulletsToAddAfter[i] = val
 			}
 			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
+			addEdge(r.g, nodeMap, previousNode, i)
 			if stack.Len() > 0 {
-				nextNodeId := stack.Pop()
+				nextNodeId := stack.Peek()
 				bulletStr = bulletLevel[nextNodeId]
 			}
 		}
 	}
 	fmt.Println("}")
+	pp.Println(r.g)
+}
+
+func addEdge(g *simple.DirectedGraph, nodeMap map[int]simple.Node, src, dst int) {
+	tryToAddNewNode(g, nodeMap, src, dst)
+	g.SetEdge(g.NewEdge(nodeMap[src], nodeMap[dst]))
+}
+
+func tryToAddNewNode(g *simple.DirectedGraph, nodeMap map[int]simple.Node, nodes ...int) {
+	for _, node := range nodes {
+		if _, ok := nodeMap[node]; !ok {
+			nodeMap[node] = simple.Node(node)
+			g.AddNode(nodeMap[node])
+		}
+	}
 }

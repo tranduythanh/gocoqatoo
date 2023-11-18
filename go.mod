@@ -15,4 +15,5 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/smarty/assertions v1.15.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
+	gonum.org/v1/gonum v0.14.0 // indirect
 )
