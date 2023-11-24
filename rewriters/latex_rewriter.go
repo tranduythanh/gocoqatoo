@@ -1,6 +1,9 @@
 package rewriters
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type LatexRewriter struct {
 	TextRewriter
@@ -10,6 +13,21 @@ func NewLatexRewriter(tr TextRewriter) *LatexRewriter {
 	return &LatexRewriter{
 		TextRewriter: tr,
 	}
+}
+
+func (lr *LatexRewriter) Rewrite(proofScript string) {
+	lr.ExtractInformation(proofScript)
+
+	textVersion := lr.GetTextVersion()
+
+	textVersion = strings.ReplaceAll(textVersion, "<[{", "")
+	textVersion = strings.ReplaceAll(textVersion, "}]>", "")
+	fmt.Println(`
+---------------------------------------------
+|             Text Version                  |
+---------------------------------------------`,
+	)
+	fmt.Println(textVersion)
 }
 
 func (lr *LatexRewriter) GetTextVersion() string {

@@ -56,13 +56,14 @@ func (i *Intros) Apply(
 
 	if variables != "" {
 		variables = strings.TrimSuffix(variables, ", ")
-		result += fmt.Sprintf("\nintros.given:\t%s", variables)
+
+		result += fmt.Sprintf("%s:\t%s", i.bundle["intros.given"], variables)
 	}
 	if hypotheses != "" {
 		hypotheses = strings.TrimSuffix(hypotheses, ", ")
-		result += fmt.Sprintf("\nintros.suppose:\t%s", hypotheses)
+		result += fmt.Sprintf("%s:\t%s", i.bundle["intros.suppose"], hypotheses)
 	}
-	result += fmt.Sprintf("\nintros.goal:\t%s", output.Goal.Value)
+	result += fmt.Sprintf("%s:\t%s", i.bundle["intros.goal"], output.Goal.Value)
 
 	return result
 }

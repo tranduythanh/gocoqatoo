@@ -43,10 +43,10 @@ func main() {
 		verifyFileExists(*inputFile)
 		fileContents, _ := os.ReadFile(*inputFile)
 
-		// fmt.Println("---------------------------------------------")
-		// fmt.Println("|             Coq Version                   |")
-		// fmt.Println("---------------------------------------------")
-		// fmt.Println(string(fileContents))
+		fmt.Println("---------------------------------------------")
+		fmt.Println("|             Coq Version                   |")
+		fmt.Println("---------------------------------------------")
+		fmt.Println(string(fileContents))
 
 		switch *mode {
 		case "coq":

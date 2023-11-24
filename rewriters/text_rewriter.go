@@ -8,6 +8,7 @@ import (
 	"github.com/tranduythanh/gocoqatoo/rewriters/rules"
 	"github.com/tranduythanh/gocoqatoo/stack"
 	"github.com/yudai/pp"
+	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
 )
 
@@ -71,7 +72,7 @@ func (tr *TextRewriter) UpdatedIndentationLevel(input *coq.Input) string {
 
 func (tr *TextRewriter) GetTextVersion() string {
 	textVersion := ""
-	indentation := ""
+	indentation := "\t-"
 
 	for i, p := range tr.InputsOutputs {
 		input := p.Input
@@ -148,99 +149,27 @@ func (tr *TextRewriter) GetTextVersion() string {
 }
 
 func (tr *TextRewriter) Rewrite(proofScript string) {
-	// formattedScript := tr.FormatScript(proofScript)
-	// pp.Println(formattedScript)
-
 	tr.ExtractInformation(proofScript)
 
 	textVersion := tr.GetTextVersion()
 
 	textVersion = strings.ReplaceAll(textVersion, "<[{", "")
 	textVersion = strings.ReplaceAll(textVersion, "}]>", "")
+	fmt.Println("---------------------------------------------")
+	fmt.Println("|               Text Version                |")
+	fmt.Println("---------------------------------------------")
 	fmt.Println(textVersion)
 }
 
-func (tr *TextRewriter) FormatScript(proofScript string) string {
-	formattedScript := proofScript
+func (r *TextRewriter) OutputProofTreeAsDot() {
+	fmt.Println("---------------------------------------------")
+	fmt.Println("|                Proof Tree                 |")
+	fmt.Println("---------------------------------------------")
+	fmt.Println("digraph {")
 
-	// Step 1: Format proof so that there is one tactic/chain per line
-	formattedScript = strings.ReplaceAll(formattedScript, ".", ".\n")
-
-	// Step 2: Remove bullets
-	lines := strings.Split(formattedScript, "\n")
-	formattedScript = ""
-	for _, line := range lines {
-		l := strings.TrimSpace(line)
-		for strings.HasPrefix(l, "-") || strings.HasPrefix(l, "*") || strings.HasPrefix(l, "+") || strings.HasPrefix(l, "{") || strings.HasPrefix(l, "}") {
-			l = strings.TrimSpace(l[1:])
-		}
-		if l != "" {
-			formattedScript += l + "\n"
-		}
-	}
-
-	// Step 3: Execute formatted script to get the list of inputs/outputs
-	// Assuming `Main.coqtop.execute` is a function returning a slice of InputOutput
-	tr.InputsOutputs = coq.NewCoqtop(true).Execute(formattedScript)
-
-	// Step 4: Build the proof tree
-	// TODO: Clean this part
-	var s []int
-	bulletLevel := make(map[int]string)
-	bulletsToAddAfter := make(map[int]string)
-	bulletStr := ""
-	for i, p := range tr.InputsOutputs {
-		if p.Input.Value == "Qed." {
-			break
-		}
-		if i == 0 {
-			s = append(s, i)
-		} else if i > 0 {
-			previousNode := s[len(s)-1]
-			s = s[:len(s)-1]
-
-			previousPair := tr.InputsOutputs[i-1]
-			numberOfSubgoalsBeforeTactic := previousPair.Output.GetNumberOfRemainingSubgoals()
-			numberOfSubgoalsAfterTactic := p.Output.GetNumberOfRemainingSubgoals()
-
-			addedSubgoals := numberOfSubgoalsAfterTactic - numberOfSubgoalsBeforeTactic
-			for j := 0; j <= addedSubgoals; j++ {
-				s = append(s, i)
-			}
-			if addedSubgoals > 0 {
-				bulletStr += "-"
-				bulletLevel[i] = bulletStr
-			} else if addedSubgoals == 0 {
-				if val, ok := bulletLevel[previousNode]; ok {
-					bulletsToAddAfter[i] = val
-				}
-				s = append(s, i)
-			} else if addedSubgoals < 0 {
-				if val, ok := bulletLevel[previousNode]; ok {
-					bulletsToAddAfter[i] = val
-				}
-				if len(s) > 0 {
-					nextNodeId := s[len(s)-1]
-					bulletStr = bulletLevel[nextNodeId]
-				}
-			}
-		}
-	}
-
-	// Step 5: Insert bullets in inputsOutputs
-	numberOfInputsInserted := 0
-	for index, val := range bulletsToAddAfter {
-		newInputOutput := &coq.InputOutput{
-			Input:  &coq.Input{Value: val},
-			Output: tr.InputsOutputs[index+numberOfInputsInserted-1].Output,
-		}
-		tr.InputsOutputs = append(tr.InputsOutputs[:index+numberOfInputsInserted], append([]*coq.InputOutput{newInputOutput}, tr.InputsOutputs[index+numberOfInputsInserted:]...)...)
-		numberOfInputsInserted++
-	}
-
-	pp.Println(tr.InputsOutputs)
-
-	return formattedScript
+	r.ParseGraph()
+	txt := r.OutputGraphAsDot()
+	fmt.Println(txt)
 }
 
 func (tr *TextRewriter) ExtractInformation(proofScript string) {
@@ -256,18 +185,47 @@ func (tr *TextRewriter) ExtractInformation(proofScript string) {
 	}
 }
 
-func (r *TextRewriter) OutputProofTreeAsDot() {
+func (r *TextRewriter) OutputGraphAsDot() string {
+	var dotBuilder strings.Builder
+	dotBuilder.WriteString("digraph {\n")
+
+	// Create a snapshot of nodes
+	nodesSnapshot := make([]int64, 0)
+	for nodes := r.g.Nodes(); nodes.Next(); {
+		nodesSnapshot = append(nodesSnapshot, nodes.Node().ID())
+	}
+
+	pp.Println(nodesSnapshot)
+
+	// Iterate over the snapshot of nodes
+	for _, nodeID := range nodesSnapshot {
+		curNode := r.InputsOutputs[nodeID]
+		dotBuilder.WriteString(fmt.Sprintf("\t%d [label=\"%d. %s\"];\n", nodeID, nodeID, curNode.Input.Value))
+
+		// Create a snapshot of edges for the current node
+		edgesSnapshot := make([]graph.Edge, 0)
+		for toNode := r.g.From(nodeID); toNode.Next(); {
+			edgesSnapshot = append(edgesSnapshot, simple.Edge{
+				F: simple.Node(nodeID),
+				T: simple.Node(toNode.Node().ID()),
+			})
+		}
+
+		// Iterate over the snapshot of edges
+		for _, edge := range edgesSnapshot {
+			targetID := edge.To().ID()
+			dotBuilder.WriteString(fmt.Sprintf("\t%d -> %d;\n", nodeID, targetID))
+		}
+	}
+
+	dotBuilder.WriteString("}\n")
+	return dotBuilder.String()
+}
+
+func (r *TextRewriter) ParseGraph() {
 	nodeMap := make(map[int]simple.Node)
 
-	fmt.Println("---------------------------------------------")
-	fmt.Println("|                Proof Tree                 |")
-	fmt.Println("---------------------------------------------")
-	fmt.Println("digraph {")
-
 	stack := stack.New[int]()
-	bulletLevel := make(map[int]string)
-	bulletsToAddAfter := make(map[int]string)
-	bulletStr := ""
 
 	for i, p := range r.InputsOutputs {
 		if p.Input.Value == "Qed." {
@@ -291,33 +249,21 @@ func (r *TextRewriter) OutputProofTreeAsDot() {
 			for j := 0; j <= addedSubgoals; j++ {
 				stack.Push(i)
 			}
-			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
 			addEdge(r.g, nodeMap, previousNode, i)
-			bulletStr += "-"
-			bulletLevel[i] = bulletStr
+			continue
+		}
 
-		} else if addedSubgoals == 0 {
-			if val, ok := bulletLevel[previousNode]; ok {
-				bulletsToAddAfter[i] = val
-			}
-			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
+		if addedSubgoals == 0 {
 			addEdge(r.g, nodeMap, previousNode, i)
 			stack.Push(i)
+			continue
+		}
 
-		} else if addedSubgoals < 0 {
-			if val, ok := bulletLevel[previousNode]; ok {
-				bulletsToAddAfter[i] = val
-			}
-			fmt.Printf("\"%d. %s\" -> \"%d. %s\";\n", previousNode, r.InputsOutputs[previousNode].Input.Value, i, r.InputsOutputs[i].Input.Value)
+		if addedSubgoals < 0 {
 			addEdge(r.g, nodeMap, previousNode, i)
-			if stack.Len() > 0 {
-				nextNodeId := stack.Peek()
-				bulletStr = bulletLevel[nextNodeId]
-			}
+			continue
 		}
 	}
-	fmt.Println("}")
-	pp.Println(r.g)
 }
 
 func addEdge(g *simple.DirectedGraph, nodeMap map[int]simple.Node, src, dst int) {
